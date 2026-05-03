@@ -301,7 +301,7 @@
     font-size: 1rem;
     margin-bottom: 1.2rem;
   }
-  .story-text strong { color: var(--white); }
+  .story-text strong { color: var(--white); font-weight: 700; }
 
   /* Timeline */
   .timeline { display: flex; flex-direction: column; gap: 0; }
@@ -713,7 +713,7 @@
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // Script d'envoi direct vers Discord
+  // Script d'envoi utilisant un proxy Discord pour éviter le blocage CORS et l'erreur 405
   document.getElementById('partnership-form').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -721,7 +721,7 @@
     const link = document.getElementById('server-link').value;
     const desc = document.getElementById('server-desc').value;
 
-    const webhookUrl = "https://discord.com/api/webhooks/1500518530876047391/t1wNqvxSbK7alxUA07fL6EzGu8r1KYOj6zY-rAM4sgkU7_lvnsszaeNdp30nZds9Ej8i";
+    const discordWebhookUrl = "https://discord.com/api/webhooks/1500518530876047391/t1wNqvxSbK7alxUA07fL6EzGu8r1KYOj6zY-rAM4sgkU7_lvnsszaeNdp30nZds9Ej8i";
 
     const payload = {
         content: "📢 **Nouvelle demande de partenariat !**",
@@ -739,27 +739,65 @@
 
     const messageBox = document.getElementById('form-message');
 
-    fetch(webhookUrl, {
+    fetch(discordWebhookUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
     }).then(response => {
-        if(response.ok) {
+        if (response.ok) {
             messageBox.innerText = "Demande envoyée avec succès !";
             messageBox.style.color = "var(--orange)";
             messageBox.style.display = "block";
             document.getElementById('partnership-form').reset();
         } else {
-            messageBox.innerText = "Une erreur est survenue lors de l'envoi.";
-            messageBox.style.color = "#ff4d4d";
-            messageBox.style.display = "block";
+            fetch('https://corsproxy.io/?' + encodeURIComponent(discordWebhookUrl), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            }).then(proxyResponse => {
+                if (proxyResponse.ok) {
+                    messageBox.innerText = "Demande envoyée avec succès !";
+                    messageBox.style.color = "var(--orange)";
+                    messageBox.style.display = "block";
+                    document.getElementById('partnership-form').reset();
+                } else {
+                    messageBox.innerText = "Une erreur est survenue lors de l'envoi.";
+                    messageBox.style.color = "#ff4d4d";
+                    messageBox.style.display = "block";
+                }
+            }).catch(() => {
+                messageBox.innerText = "Impossible de joindre le serveur. Vérifiez votre connexion.";
+                messageBox.style.color = "#ff4d4d";
+                messageBox.style.display = "block";
+            });
         }
     }).catch(() => {
-        messageBox.innerText = "Impossible de joindre le serveur. Vérifiez votre URL ou votre connexion.";
-        messageBox.style.color = "#ff4d4d";
-        messageBox.style.display = "block";
+        fetch('https://corsproxy.io/?' + encodeURIComponent(discordWebhookUrl), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(proxyResponse => {
+            if (proxyResponse.ok) {
+                messageBox.innerText = "Demande envoyée avec succès !";
+                messageBox.style.color = "var(--orange)";
+                messageBox.style.display = "block";
+                document.getElementById('partnership-form').reset();
+            } else {
+                messageBox.innerText = "Erreur lors de l'envoi des données.";
+                messageBox.style.color = "#ff4d4d";
+                messageBox.style.display = "block";
+            }
+        }).catch(() => {
+            messageBox.innerText = "Impossible de joindre le serveur.";
+            messageBox.style.color = "#ff4d4d";
+            messageBox.style.display = "block";
+        });
     });
   });
 </script>
